@@ -94,6 +94,51 @@ const articles = [
 
 const publicArticles = articles.map(({ source, ...article }) => article);
 
+const retroComicReferences = [
+  {
+    id: "retro-reddit-cover",
+    article: "Reddit",
+    type: "Cover",
+    ratio: "3:4",
+    image: "graphics-aigym-style/01-reddit-cover.png",
+  },
+  {
+    id: "retro-reddit-infographic",
+    article: "Reddit",
+    type: "Infographic",
+    ratio: "16:9",
+    image: "graphics-aigym-style/01-reddit-infographic.png",
+  },
+  {
+    id: "retro-xueqiu-cover",
+    article: "雪球",
+    type: "Cover",
+    ratio: "3:4",
+    image: "graphics-aigym-style/02-xueqiu-cover.png",
+  },
+  {
+    id: "retro-xueqiu-infographic",
+    article: "雪球",
+    type: "Infographic",
+    ratio: "16:9",
+    image: "graphics-aigym-style/02-xueqiu-infographic.png",
+  },
+  {
+    id: "retro-x-cover",
+    article: "X / Twitter",
+    type: "Cover",
+    ratio: "3:4",
+    image: "graphics-aigym-style/03-x-cover.png",
+  },
+  {
+    id: "retro-x-infographic",
+    article: "X / Twitter",
+    type: "Infographic",
+    ratio: "16:9",
+    image: "graphics-aigym-style/03-x-infographic.png",
+  },
+];
+
 const html = String.raw`<!doctype html>
 <html lang="en">
   <head>
@@ -351,6 +396,41 @@ const html = String.raw`<!doctype html>
         font-weight: 680;
       }
 
+      .style-reference {
+        padding: 8px 0 78px;
+      }
+
+      .style-intro {
+        max-width: 760px;
+        margin: 0 0 26px;
+        color: #39444e;
+        font-size: 1.05rem;
+      }
+
+      .style-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .style-card {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 12px 42px rgba(23, 32, 42, 0.09);
+      }
+
+      .style-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .style-card.wide {
+        grid-column: span 2;
+      }
+
       .article-panel {
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -509,6 +589,14 @@ const html = String.raw`<!doctype html>
           align-items: start;
         }
 
+        .style-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .style-card.wide {
+          grid-column: span 1;
+        }
+
         .section-heading {
           display: block;
         }
@@ -547,6 +635,10 @@ const html = String.raw`<!doctype html>
           margin-top: 16px;
           width: 100%;
         }
+
+        .style-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -558,6 +650,7 @@ const html = String.raw`<!doctype html>
           <p class="hero-copy">Three platform-ready articles for review and feedback. Each section shows the exact copywriting with the generated cover and infographic.</p>
           <div class="hero-actions">
             <a class="button primary" href="#articles">View articles</a>
+            <a class="button" href="#retro-comic-style">Retro comic style</a>
           </div>
         </div>
         <div class="hero-media" aria-hidden="true">
@@ -580,6 +673,15 @@ const html = String.raw`<!doctype html>
         </div>
         <div id="article-list"></div>
       </section>
+
+      <section class="shell style-reference" id="retro-comic-style">
+        <div class="section-heading">
+          <h2>Retro comic style reference</h2>
+          <p>One extra image direction for feedback, shown as a complete set across all three articles.</p>
+        </div>
+        <p class="style-intro">This option uses bold ink outlines, flat poster shapes, halftone texture, paper grain, and a limited aqua / coral / cream palette. It is more editorial and playful than the main style.</p>
+        <div class="style-grid" id="retro-comic-list"></div>
+      </section>
     </main>
 
     <footer class="shell footer">
@@ -587,8 +689,10 @@ const html = String.raw`<!doctype html>
     </footer>
 
     <script type="application/json" id="article-data">${JSON.stringify(publicArticles).replace(/</g, "\\u003c")}</script>
+    <script type="application/json" id="retro-comic-data">${JSON.stringify(retroComicReferences).replace(/</g, "\\u003c")}</script>
     <script>
       const articles = JSON.parse(document.getElementById("article-data").textContent);
+      const retroComicReferences = JSON.parse(document.getElementById("retro-comic-data").textContent);
 
       const escapeHtml = (value) =>
         value.replace(/[&<>"']/g, (char) => ({
@@ -669,6 +773,12 @@ const html = String.raw`<!doctype html>
       ).join("");
 
       document.getElementById("article-list").innerHTML = articles.map(articleTemplate).join("");
+      document.getElementById("retro-comic-list").innerHTML = retroComicReferences.map((item) => [
+        '<figure class="style-card ' + (item.type === "Infographic" ? "wide" : "") + '">',
+        '<img src="' + item.image + '" alt="' + escapeHtml(item.article + " " + item.type + " retro comic style reference") + '" loading="eager" />',
+        '<figcaption class="image-caption"><span>' + escapeHtml(item.article + " " + item.type) + '</span><span>' + escapeHtml(item.ratio) + '</span></figcaption>',
+        '</figure>',
+      ].join("")).join("");
 
       document.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-copy]");

@@ -9,6 +9,7 @@ Static review site for DeptAI article drafts.
 - `02-xueqiu-ai-screening-justin-v2.md` - Xueqiu draft source
 - `03-x-earnings-workflow-thread-justin-v2.md` - X / Twitter draft source
 - `graphics/` - generated cover and infographic images
+- `graphics-aigym-style/` - retro comic style reference images
 - `build-site.mjs` - local generator for rebuilding `index.html`
 
 ## Rebuild
