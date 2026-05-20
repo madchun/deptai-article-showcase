@@ -1,6 +1,6 @@
-# Longbridge People Justin V2 Showcase
+# Article showcase from DeptAI
 
-Static review site for the Longbridge Justin V2 article drafts.
+Static review site for DeptAI article drafts.
 
 ## Contents
 

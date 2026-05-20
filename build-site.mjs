@@ -4,6 +4,58 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+function splitBlocks(markdown) {
+  return markdown.trim().split(/\n{2,}/);
+}
+
+function cleanTitle(rawTitle) {
+  return rawTitle
+    .replace(/^#\s+/, "")
+    .replace(/^Reddit Draft V2:\s*/, "")
+    .replace(/^X \/ Twitter Draft V2:\s*/, "")
+    .replace(/^雪球草稿 V2：\s*/, "")
+    .trim();
+}
+
+function extractCopywriting(markdown, id) {
+  const blocks = splitBlocks(markdown);
+  const title = cleanTitle(blocks[0] || "Untitled article");
+  const bodyBlocks = [];
+  let includeBody = false;
+
+  for (const block of blocks.slice(1)) {
+    const firstLine = block.split("\n")[0] || "";
+
+    if (/^(Draft|正文草稿)(?:[:：])$/.test(firstLine)) {
+      includeBody = true;
+      continue;
+    }
+
+    if (id === "x" && /^(Suggested hook|Thread draft)(?:[:：])$/.test(firstLine)) {
+      includeBody = true;
+      continue;
+    }
+
+    if (!includeBody) {
+      continue;
+    }
+
+    if (/^(Thread draft)(?:[:：])$/.test(firstLine)) {
+      continue;
+    }
+
+    bodyBlocks.push(block);
+  }
+
+  const bodyMarkdown = bodyBlocks.join("\n\n").trim();
+
+  return {
+    title,
+    bodyMarkdown,
+    copyMarkdown: `# ${title}\n\n${bodyMarkdown}`.trim(),
+  };
+}
+
 const articles = [
   {
     id: "reddit",
@@ -32,17 +84,22 @@ const articles = [
     cover: "graphics/03-x-cover.png",
     infographic: "graphics/03-x-infographic.png",
   },
-].map((article) => ({
-  ...article,
-  markdown: fs.readFileSync(path.join(__dirname, article.source), "utf8").trim(),
-}));
+].map((article) => {
+  const markdown = fs.readFileSync(path.join(__dirname, article.source), "utf8").trim();
+  return {
+    ...article,
+    ...extractCopywriting(markdown, article.id),
+  };
+});
+
+const publicArticles = articles.map(({ source, ...article }) => article);
 
 const html = String.raw`<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Longbridge People | Justin V2 Article Showcase</title>
+    <title>Article showcase from DeptAI</title>
     <style>
       :root {
         color-scheme: light;
@@ -92,30 +149,6 @@ const html = String.raw`<!doctype html>
         gap: clamp(28px, 5vw, 72px);
         align-items: center;
         padding: 38px 0 44px;
-      }
-
-      .brand {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 28px;
-        color: var(--muted);
-        font-size: 0.9rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .brand-mark {
-        width: 34px;
-        height: 34px;
-        display: inline-grid;
-        place-items: center;
-        border-radius: 8px;
-        color: #fff;
-        background: var(--accent);
-        font-weight: 800;
-        letter-spacing: 0;
       }
 
       h1 {
@@ -521,12 +554,10 @@ const html = String.raw`<!doctype html>
     <main>
       <section class="shell hero">
         <div>
-          <div class="brand"><span class="brand-mark">LB</span> Longbridge People</div>
-          <h1>Justin V2 article showcase</h1>
-          <p class="hero-copy">Three platform-ready drafts for LB people to review, share, and reuse. Each section keeps the exact source article text and pairs it with the generated cover and infographic.</p>
+          <h1>Article showcase from DeptAI</h1>
+          <p class="hero-copy">Three platform-ready articles for review and feedback. Each section shows the exact copywriting with the generated cover and infographic.</p>
           <div class="hero-actions">
             <a class="button primary" href="#articles">View articles</a>
-            <a class="button" href="README.md">Open draft notes</a>
           </div>
         </div>
         <div class="hero-media" aria-hidden="true">
@@ -544,18 +575,18 @@ const html = String.raw`<!doctype html>
 
       <section class="shell" id="articles">
         <div class="section-heading">
-          <h2>Exact drafts with assets</h2>
-          <p>Rendered for reading, with the original Markdown available under each article for exact copy review.</p>
+          <h2>Exact copywriting with assets</h2>
+          <p>Rendered for reading, with a clean copy block available under each article.</p>
         </div>
         <div id="article-list"></div>
       </section>
     </main>
 
     <footer class="shell footer">
-      Built from the Justin V2 source drafts in this folder. Re-run <code>node build-site.mjs</code> after editing the Markdown files.
+      Built from DeptAI article drafts. Re-run <code>node build-site.mjs</code> after editing the Markdown files.
     </footer>
 
-    <script type="application/json" id="article-data">${JSON.stringify(articles).replace(/</g, "\\u003c")}</script>
+    <script type="application/json" id="article-data">${JSON.stringify(publicArticles).replace(/</g, "\\u003c")}</script>
     <script>
       const articles = JSON.parse(document.getElementById("article-data").textContent);
 
@@ -567,10 +598,6 @@ const html = String.raw`<!doctype html>
           '"': "&quot;",
           "'": "&#39;",
         })[char]);
-
-      function getTitle(markdown) {
-        return markdown.split("\n").find((line) => line.startsWith("# "))?.replace(/^#\s+/, "") || "Untitled draft";
-      }
 
       function renderMarkdown(markdown) {
         const blocks = markdown.split(/\n{2,}/);
@@ -598,16 +625,11 @@ const html = String.raw`<!doctype html>
             return "<ol>" + lines.map((line) => "<li>" + escapeHtml(line.replace(/^\d+\.\s+/, "")) + "</li>").join("") + "</ol>";
           }
 
-          if (/^(Platform|Language|平台|语言|Suggested title options|Suggested hook|Draft|Thread draft|建议标题|正文草稿)(?:[:：])/.test(firstLine)) {
-            return '<p class="label-line">' + escapeHtml(block).replace(/\n/g, "<br />") + "</p>";
-          }
-
           return "<p>" + escapeHtml(block).replace(/\n/g, "<br />") + "</p>";
         }).join("");
       }
 
       function articleTemplate(article) {
-        const title = getTitle(article.markdown);
         return [
           '<article class="article" id="' + article.id + '">',
           '<aside class="article-media" aria-label="' + escapeHtml(article.platform) + ' images">',
@@ -628,14 +650,14 @@ const html = String.raw`<!doctype html>
           '<span class="tag alt">' + escapeHtml(article.language) + '</span>',
           '<span class="tag">' + escapeHtml(article.badge) + '</span>',
           '</div>',
-          '<h2 class="article-title">' + escapeHtml(title) + '</h2>',
+          '<h2 class="article-title">' + escapeHtml(article.title) + '</h2>',
           '</div>',
-          '<button class="copy-button" type="button" data-copy="' + article.id + '">Copy Markdown</button>',
+          '<button class="copy-button" type="button" data-copy="' + article.id + '">Copy Copywriting</button>',
           '</header>',
-          '<div class="rendered">' + renderMarkdown(article.markdown) + '</div>',
+          '<div class="rendered">' + renderMarkdown(article.bodyMarkdown) + '</div>',
           '<details>',
-          '<summary>Exact Markdown source</summary>',
-          '<pre>' + escapeHtml(article.markdown) + '</pre>',
+          '<summary>Exact copywriting</summary>',
+          '<pre>' + escapeHtml(article.copyMarkdown) + '</pre>',
           '</details>',
           '</section>',
           '</article>',
@@ -653,7 +675,7 @@ const html = String.raw`<!doctype html>
         if (!button) return;
         const article = articles.find((item) => item.id === button.dataset.copy);
         if (!article) return;
-        await navigator.clipboard.writeText(article.markdown);
+        await navigator.clipboard.writeText(article.copyMarkdown);
         const originalText = button.textContent;
         button.textContent = "Copied";
         window.setTimeout(() => {
